@@ -25,3 +25,11 @@ def get_user(request: Request) -> dict:
 
 def is_super_admin(open_id: str) -> bool:
     return open_id in settings.SUPER_ADMINS
+
+
+# 无需登录即可访问的路径
+PUBLIC_PATHS = {"/auth/callback", "/api/jsapi-config"}
+
+
+def needs_auth(path: str) -> bool:
+    return path not in PUBLIC_PATHS and not path.startswith("/static")

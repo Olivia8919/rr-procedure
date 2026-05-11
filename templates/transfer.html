@@ -42,17 +42,25 @@
             userId: '',
             userName: '',
             openContactPicker() {
-                if (window.tt && tt.openUserProfile) {
-                    tt.openUserProfile({
-                        userId: '',
-                        success: (res) => {
-                            this.userId = res.userId;
-                            this.userName = res.userName || res.userId;
-                        }
-                    });
-                } else {
-                    alert('请在企业微信/飞书客户端中打开');
+                if (!window.tt || !tt.chooseContact) {
+                    alert('请在飞书客户端中打开');
+                    return;
                 }
+                tt.chooseContact({
+                    multi: false,
+                    ignore: true,
+                    externalContact: false,
+                    enableChooseDepartment: false,
+                    success: (res) => {
+                        if (res.data && res.data.length > 0) {
+                            this.userId = res.data[0].openId;
+                            this.userName = res.data[0].name || res.data[0].openId;
+                        }
+                    },
+                    fail: (err) => {
+                        console.error('选人失败:', err);
+                    }
+                });
             }
         }
     }

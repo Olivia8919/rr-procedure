@@ -1,12 +1,16 @@
+from dotenv import load_dotenv
+load_dotenv()
+
 from contextlib import asynccontextmanager
 from fastapi import FastAPI, Request
 from fastapi.responses import RedirectResponse, HTMLResponse
 from fastapi.staticfiles import StaticFiles
 from jinja2 import Environment, FileSystemLoader, select_autoescape
 from settings import settings
-from auth import create_session
-from models.feishu import get_user_info, close_client
+from auth import create_session, needs_auth, serializer
+from models.feishu import get_user_info, close_client, _get_jsapi_ticket, generate_jsapi_signature
 from database import close_db
+from itsdangerous import BadSignature
 import httpx
 
 import routes.home as home_routes
@@ -48,6 +52,31 @@ app.include_router(starwall_routes.router)
 app.include_router(admin_routes.router)
 
 
+@app.middleware("http")
+async def auth_middleware(request: Request, call_next):
+    if not needs_auth(request.url.path):
+        return await call_next(request)
+
+    session = request.cookies.get("rr_session")
+    if session:
+        try:
+            serializer.loads(session)
+            return await call_next(request)
+        except BadSignature:
+            pass
+
+    code = request.query_params.get("code")
+    if code:
+        return RedirectResponse(url=f"/auth/callback?code={code}")
+
+    redirect_uri = str(request.url).split("?")[0]
+    auth_url = (
+        f"{settings.FEISHU_API_BASE}/authen/v1/authorize"
+        f"?app_id={settings.FEISHU_APP_ID}&redirect_uri={redirect_uri}"
+    )
+    return RedirectResponse(url=auth_url)
+
+
 @app.get("/auth/callback")
 async def auth_callback(code: str = ""):
     if not code:
@@ -65,6 +94,24 @@ async def auth_callback(code: str = ""):
         return resp
     except (httpx.HTTPError, KeyError, ValueError):
         return HTMLResponse("<p>认证失败，请重试</p>")
+
+
+@app.get("/api/jsapi-config")
+async def jsapi_config(url: str = ""):
+    """返回飞书 JSSDK 初始化所需的签名配置"""
+    if not url:
+        return {"error": "缺少 url 参数"}
+    try:
+        ticket = await _get_jsapi_ticket()
+        sig = generate_jsapi_signature(ticket, url)
+        return {
+            "appId": settings.FEISHU_APP_ID,
+            "timestamp": sig["timestamp"],
+            "noncestr": sig["noncestr"],
+            "signature": sig["signature"],
+        }
+    except (httpx.HTTPError, KeyError):
+        return {"error": "获取 JSSDK 签名失败"}
 
 
 if __name__ == "__main__":

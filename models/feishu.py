@@ -1,9 +1,13 @@
+import hashlib
+import random
+import string
 import time
 import httpx
 from settings import settings
 
 _client: httpx.AsyncClient | None = None
 _token: tuple[str, float] | None = None  # (token, expires_at)
+_jsapi_ticket: tuple[str, float] | None = None  # (ticket, expires_at)
 
 
 async def get_client() -> httpx.AsyncClient:
@@ -38,6 +42,38 @@ async def _get_tenant_token() -> str:
     return _token[0]
 
 
+async def _get_jsapi_ticket() -> str:
+    global _jsapi_ticket
+    if _jsapi_ticket and time.time() < _jsapi_ticket[1]:
+        return _jsapi_ticket[0]
+    token = await _get_tenant_token()
+    client = await get_client()
+    resp = await client.post(
+        f"{settings.FEISHU_API_BASE}/jssdk/ticket/get",
+        headers={"Authorization": f"Bearer {token}"},
+    )
+    resp.raise_for_status()
+    data = resp.json()
+    ticket = data["data"]["ticket"]
+    expires = time.time() + data["data"].get("expire_in", 7200) - 60
+    _jsapi_ticket = (ticket, expires)
+    return ticket
+
+
+def generate_jsapi_signature(ticket: str, url: str) -> dict:
+    timestamp = str(int(time.time() * 1000))
+    noncestr = "".join(random.choices(string.ascii_letters + string.digits, k=16))
+    params = sorted([
+        f"jsapi_ticket={ticket}",
+        f"noncestr={noncestr}",
+        f"timestamp={timestamp}",
+        f"url={url}",
+    ])
+    sign_str = "&".join(params)
+    signature = hashlib.sha1(sign_str.encode()).hexdigest()
+    return {"timestamp": timestamp, "noncestr": noncestr, "signature": signature}
+
+
 async def get_user_info(code: str) -> dict:
     token = await _get_tenant_token()
     client = await get_client()
@@ -68,8 +104,9 @@ async def get_bitable_records(table_id: str, filter_expr: str = None) -> list[di
             params=params,
         )
         resp.raise_for_status()
-        data = resp.json()["data"]
-        all_records.extend(data.get("items", []))
+        data = resp.json().get("data") or {}
+        items = data.get("items") or []
+        all_records.extend(items)
         if not data.get("has_more"):
             break
         page_token = data.get("page_token")
@@ -81,7 +118,7 @@ async def add_bitable_records(table_id: str, records: list[dict]) -> dict:
     client = await get_client()
     resp = await client.post(
         f"{settings.FEISHU_API_BASE}/bitable/v1/apps/{settings.BITABLE_APP_TOKEN}"
-        f"/tables/{table_id}/records",
+        f"/tables/{table_id}/records/batch_create",
         headers={"Authorization": f"Bearer {token}"},
         json={"records": records},
     )
@@ -92,14 +129,17 @@ async def add_bitable_records(table_id: str, records: list[dict]) -> dict:
 async def update_bitable_records(table_id: str, records: list[dict]) -> dict:
     token = await _get_tenant_token()
     client = await get_client()
-    resp = await client.put(
-        f"{settings.FEISHU_API_BASE}/bitable/v1/apps/{settings.BITABLE_APP_TOKEN}"
-        f"/tables/{table_id}/records",
-        headers={"Authorization": f"Bearer {token}"},
-        json={"records": records},
-    )
-    resp.raise_for_status()
-    return resp.json()
+    base = f"{settings.FEISHU_API_BASE}/bitable/v1/apps/{settings.BITABLE_APP_TOKEN}/tables/{table_id}/records"
+    results = []
+    for rec in records:
+        resp = await client.put(
+            f"{base}/{rec['record_id']}",
+            headers={"Authorization": f"Bearer {token}"},
+            json={"fields": rec["fields"]},
+        )
+        resp.raise_for_status()
+        results.append(resp.json())
+    return {"records": results}
 
 
 async def get_user_name(open_id: str) -> str:

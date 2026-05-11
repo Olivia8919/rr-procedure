@@ -7,6 +7,7 @@
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@picocss/pico@2/css/pico.min.css">
     <script src="https://unpkg.com/htmx.org@1.9.10"></script>
     <script src="https://unpkg.com/alpinejs@3.13.3/dist/cdn.min.js" defer></script>
+    <script src="https://lf1-cdn-tos.bytegoofy.com/goofy/lark/op/h5-js-sdk-1.5.23.js"></script>
     <style>
         :root { --pico-font-size: 95%; }
         .container { max-width: 800px; margin: 0 auto; padding: 1rem; }
@@ -35,5 +36,32 @@
             {% block content %}{% endblock %}
         </main>
     </div>
+    <script>
+    (function() {
+        if (!window.h5sdk) return;
+
+        const url = window.location.href.split('#')[0];
+        fetch('/api/jsapi-config?url=' + encodeURIComponent(url))
+            .then(r => r.json())
+            .then(cfg => {
+                if (cfg.error) return;
+                h5sdk.config({
+                    appId: cfg.appId,
+                    timestamp: cfg.timestamp,
+                    nonceStr: cfg.noncestr,
+                    signature: cfg.signature,
+                    jsApiList: [],
+                    onSuccess: () => {
+                        window.__h5sdkReady = true;
+                        document.body.classList.add('h5sdk-ready');
+                    },
+                    onFail: (err) => {
+                        console.warn('JSSDK init error:', err);
+                    }
+                });
+            })
+            .catch(() => {});
+    })();
+    </script>
 </body>
 </html>
