@@ -1,0 +1,21 @@
+{% extends "base.html" %}
+{% block content %}
+
+<h2>咸蛋超人 — 明星墙</h2>
+
+{% if not winners %}
+    <p>暂无数据，等待轮次结束后公布。</p>
+{% else %}
+    <div class="grid">
+    {% for w in winners %}
+        <article style="text-align: center;">
+            <div class="star">&#11088;</div>
+            <h3>{{ w.winner_name }}</h3>
+            <p><strong>{{ w.department }}</strong></p>
+            <p><span class="badge badge-gold">{{ w.coins_received }} Coins</span></p>
+        </article>
+    {% endfor %}
+    </div>
+{% endif %}
+
+{% endblock %}

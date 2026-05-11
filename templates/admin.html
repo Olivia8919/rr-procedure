@@ -1,0 +1,52 @@
+{% extends "base.html" %}
+{% block content %}
+
+<h2>管理面板</h2>
+
+<h3>发起新轮次</h3>
+<form method="post" action="/admin/create-round">
+    <label>轮次名称
+        <input type="text" name="title" placeholder="如 2026 Q2 评优" required>
+    </label>
+    <label>开始日期
+        <input type="date" name="start_date" required>
+    </label>
+    <label>结束日期
+        <input type="date" name="end_date" required>
+    </label>
+    <button type="submit">发起轮次</button>
+</form>
+
+<hr>
+
+<h3>进行中的轮次</h3>
+{% for r in rounds %}
+    {% if r.status == 'active' %}
+    <article>
+        <strong>{{ r.title or r.round_id }}</strong>
+        <span style="color: var(--pico-primary)">[进行中]</span>
+        <form method="post" action="/admin/close-round" style="display:inline; margin-left:1rem;">
+            <input type="hidden" name="round_id" value="{{ r.round_id }}">
+            <button type="submit" class="secondary">关闭轮次</button>
+        </form>
+        {% if super_admin %}
+        <a href="/admin/transactions?round_id={{ r.round_id }}" role="button" class="secondary outline" style="margin-left:.5rem;">查看交易明细</a>
+        {% endif %}
+    </article>
+    {% endif %}
+{% endfor %}
+
+<h3>历史轮次</h3>
+{% for r in rounds %}
+    {% if r.status == 'closed' %}
+    <article>
+        <strong>{{ r.title or r.round_id }}</strong>
+        <span style="color: var(--pico-muted-color)">[已结束]</span>
+        {% if super_admin %}
+        <a href="/admin/transactions?round_id={{ r.round_id }}" role="button" class="secondary outline" style="margin-left:1rem;">查看交易明细</a>
+        {% endif %}
+    </article>
+    {% endif %}
+{% endfor %}
+
+{% endblock %}

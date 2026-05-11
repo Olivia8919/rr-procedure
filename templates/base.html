@@ -1,0 +1,39 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>RR Procedure — 咸蛋超人</title>
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@picocss/pico@2/css/pico.min.css">
+    <script src="https://unpkg.com/htmx.org@1.9.10"></script>
+    <script src="https://unpkg.com/alpinejs@3.13.3/dist/cdn.min.js" defer></script>
+    <style>
+        :root { --pico-font-size: 95%; }
+        .container { max-width: 800px; margin: 0 auto; padding: 1rem; }
+        nav { margin-bottom: 1.5rem; }
+        nav a { margin-right: 1rem; }
+        .star { font-size: 2rem; }
+        .badge { display: inline-block; padding: .3em .6em; border-radius: 4px; font-weight: bold; }
+        .badge-gold { background: #ffd700; color: #333; }
+        .badge-silver { background: #c0c0c0; color: #333; }
+        .tx-table { font-size: .9rem; }
+        [x-cloak] { display: none !important; }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <nav>
+            <a href="/"><strong>RR Procedure</strong></a>
+            <a href="/transfer">转赠 Coins</a>
+            <a href="/starwall">明星墙</a>
+            <a href="/admin">管理</a>
+            <span style="float:right; color: var(--pico-muted-color)">
+                {{ user.name }}
+            </span>
+        </nav>
+        <main>
+            {% block content %}{% endblock %}
+        </main>
+    </div>
+</body>
+</html>

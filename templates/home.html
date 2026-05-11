@@ -1,0 +1,31 @@
+{% extends "base.html" %}
+{% block content %}
+
+<h2>我的 Dashboard</h2>
+
+{% if not round %}
+    <p>当前没有进行中的评优轮次。</p>
+{% elif not balance %}
+    <p>你不在本轮参与名单中。</p>
+{% else %}
+    <article>
+        <h3>{{ round.title or '当前轮次' }}</h3>
+        <table>
+            <tr><td>系统分配 Coin</td><td><strong>{{ balance.allocated }}</strong></td></tr>
+            <tr><td>已转出</td><td>{{ balance.given }}</td></tr>
+            <tr><td>剩余待赠</td><td><strong style="color: var(--pico-primary)">{{ balance.remaining }}</strong></td></tr>
+            <tr><td>收到 Coin</td><td><strong>{{ balance.received }}</strong></td></tr>
+            {% if balance.department %}
+            <tr><td>部门排名</td><td><strong>#{{ balance.rank }}</strong> / {{ balance.department }}</td></tr>
+            {% endif %}
+        </table>
+
+        {% if balance.remaining > 0 %}
+        <a href="/transfer" role="button">去转赠 Coin</a>
+        {% else %}
+        <p style="color: var(--pico-primary)">你已全部转出！</p>
+        {% endif %}
+    </article>
+{% endif %}
+
+{% endblock %}

@@ -1,0 +1,33 @@
+{% extends "base.html" %}
+{% block content %}
+
+<h2>交易明细 — {{ round_id }}</h2>
+
+<a href="/admin" role="button" class="secondary outline">返回管理</a>
+
+{% if not transactions %}
+    <p>暂无交易记录。</p>
+{% else %}
+    <table class="tx-table">
+        <thead>
+            <tr>
+                <th>时间</th>
+                <th>转出者</th>
+                <th>接收者</th>
+                <th>数量</th>
+            </tr>
+        </thead>
+        <tbody>
+        {% for tx in transactions %}
+            <tr>
+                <td>{{ tx.created_at }}</td>
+                <td>{{ tx.from_name }}</td>
+                <td>{{ tx.to_name }}</td>
+                <td>{{ tx.coins }}</td>
+            </tr>
+        {% endfor %}
+        </tbody>
+    </table>
+{% endif %}
+
+{% endblock %}

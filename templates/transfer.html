@@ -1,0 +1,62 @@
+{% extends "base.html" %}
+{% block content %}
+
+<h2>转赠 Coin</h2>
+
+{% if not round %}
+    <p>当前没有进行中的轮次。</p>
+{% elif not balance %}
+    <p>未找到你的 Coin 账户。</p>
+{% elif balance.remaining <= 0 %}
+    <p>你已经全部转出，没有再可赠的 Coin 了。</p>
+    <a href="/" role="button">返回首页</a>
+{% else %}
+    <article>
+        <p>剩余可赠：<strong>{{ balance.remaining }}</strong> 个 Coin</p>
+        <p class="hint">每人最多只能送给同一位同事 3 个 Coin</p>
+    </article>
+
+    {% if error %}
+    <article style="background: var(--pico-form-element-invalid-border-color); color: white;">
+        {{ error }}
+    </article>
+    {% endif %}
+
+    <form method="post" action="/transfer" x-data="transferForm()">
+        <label>选择同事（飞书联系人）
+            <input type="hidden" name="to_user_id" x-model="userId">
+            <input type="text" name="to_user_name" x-model="userName" readonly placeholder="点击选择飞书同事..."
+                   @click="openContactPicker()">
+        </label>
+
+        <label>赠予数量
+            <input type="number" name="coins" min="1" max="{{ [balance.remaining, 3] | min }}" value="1">
+        </label>
+
+        <button type="submit">确认转赠</button>
+    </form>
+
+    <script>
+    function transferForm() {
+        return {
+            userId: '',
+            userName: '',
+            openContactPicker() {
+                if (window.tt && tt.openUserProfile) {
+                    tt.openUserProfile({
+                        userId: '',
+                        success: (res) => {
+                            this.userId = res.userId;
+                            this.userName = res.userName || res.userId;
+                        }
+                    });
+                } else {
+                    alert('请在企业微信/飞书客户端中打开');
+                }
+            }
+        }
+    }
+    </script>
+{% endif %}
+
+{% endblock %}
